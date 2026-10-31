@@ -96,6 +96,8 @@ const bars = ['top', 'bottom'].map((side) => {
   return el;
 });
 let band = 1; // 0 = full screen, 1 = 2:1 spread
+let bandFov = PAGES[0].fov ?? CAMERA.fov;
+let lensFov = bandFov;
 let lastSize = '';
 function render(dt) {
   const w = innerWidth, h = innerHeight;
@@ -105,12 +107,16 @@ function render(dt) {
   }
   const target = controls.targetPage;
   band += ((target >= 0 ? 1 : 0) - band) * (1 - Math.exp(-4 * dt));
+  // Each spread has its own lens (vertical FOV inside the band); exploring uses the default.
+  if (target >= 0) bandFov = PAGES[target].fov ?? CAMERA.fov;
+  lensFov += (bandFov - lensFov) * (1 - Math.exp(-4 * dt));
+  const fov = CAMERA.fov + (lensFov - CAMERA.fov) * band;
   const bandH = Math.min(h, w / SPREAD_ASPECT);
   const vh = h + (bandH - h) * band;
   const bar = (h - vh) / 2;
   for (const el of bars) el.style.height = bar.toFixed(1) + 'px';
   camera.aspect = w / h;
-  camera.fov = (2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(CAMERA.fov / 2)) * (h / vh))) * 180 / Math.PI;
+  camera.fov = (2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(fov / 2)) * (h / vh))) * 180 / Math.PI;
   camera.updateProjectionMatrix();
   photo.render(dt, target >= 0 ? PAGES[target].focus : undefined);
 }
@@ -124,4 +130,4 @@ renderer.setAnimationLoop(() => {
 });
 
 // For debugging from the browser console.
-window.__app = { scene, camera, renderer, controls, toys, hunt, photo };
+window.__app = { scene, camera, renderer, controls, toys, hunt, photo, PAGES };

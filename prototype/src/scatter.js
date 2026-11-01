@@ -138,8 +138,9 @@ export function scatterToys(scene, surfaces, rng) {
   ];
   // elevated track (filled in below): xz samples to keep floor items away from the ramp
   const rampXZ = [];
+  let rampCurve = null; // the marble track's centerline, handed to the marble animation
   const nearRamp = (x, z, r) => {
-    for (const p of rampXZ) if ((p[0] - x) ** 2 + (p[1] - z) ** 2 < (r + 0.04) ** 2) return true;
+    for (const p of rampXZ) if ((p[0] - x) ** 2 + (p[1] - z) ** 2 < (r + 0.05) ** 2) return true; // track is 6.4 cm wide
     return false;
   };
   const floorReject = (x, z, r, noLanes) => {
@@ -508,46 +509,45 @@ export function scatterToys(scene, surfaces, rng) {
     placeAt('cone', {}, 1.5, 0.67, 0);
     placeAt('barrier', {}, 1.55, 0.865, PI / 2 - 0.2);
 
-    // --- wooden track ramp: curves over and around the chair's rear legs and runs under the seat ---
+    // --- grooved wooden marble track: from the toy box's rim height, in a long S over the
+    // floor toys, curling in front of the chair and out onto open floor.
+    // Always descending, so marbles can roll the whole way. Points: groove floor centerline.
     const rampPts = [
-      [1.74, 0.0, 1.14], [1.66, 0.014, 1.11], [1.58, 0.05, 1.04], [1.51, 0.085, 0.95], [1.46, 0.102, 0.84], [1.42, 0.108, 0.72],
-      [1.35, 0.106, 0.64], [1.25, 0.098, 0.6], [1.15, 0.082, 0.6], [1.05, 0.052, 0.64], [0.95, 0.018, 0.7], [0.86, 0.0, 0.75], [0.78, 0.0, 0.78],
-    ].map(([x, y, z]) => [x, y + 0.01, z]);
+      [1.45, 0.56, -0.97], [1.45, 0.52, -0.78], [1.40, 0.47, -0.56], [1.28, 0.42, -0.40], [1.10, 0.37, -0.30],
+      [0.92, 0.32, -0.22], [0.76, 0.27, -0.10], [0.70, 0.22, 0.06], [0.74, 0.18, 0.22], [0.84, 0.14, 0.34],
+      [0.88, 0.10, 0.45], [0.80, 0.065, 0.52], [0.66, 0.03, 0.53], [0.54, 0.012, 0.51],
+    ];
     const ramp = make('trackRamp', { pts: rampPts });
     addWorld(ramp, 'city');
+    rampCurve = ramp.userData.curve;
     const segs = ramp.userData.segs;
     // floating colliders (groups of segments) and xz samples for keep-out
     for (let i = 0; i < segs.length; i += 3) {
       const grp = segs.slice(i, i + 4);
       const b = new THREE.Box3();
       for (const s of grp) b.expandByPoint(new THREE.Vector3(s.x, s.y, s.z));
-      b.min.x -= 0.025; b.max.x += 0.025; b.min.z -= 0.025; b.max.z += 0.025; b.min.y -= 0.011; b.max.y += 0.004;
+      b.min.x -= 0.034; b.max.x += 0.034; b.min.z -= 0.034; b.max.z += 0.034; b.min.y -= 0.013; b.max.y += 0.008;
       colliders.push(b);
     }
     for (const s of segs) rampXZ.push([s.x, s.z]);
-    // supports under the elevated parts (not across the avenue)
+    // keep the floor clear where marbles roll out past the low end
+    {
+      const e = rampCurve.getPointAt(1), t = rampCurve.getTangentAt(1);
+      const h = Math.hypot(t.x, t.z);
+      for (let d = 0.03; d <= 0.15; d += 0.03) rampXZ.push([e.x + (t.x / h) * d, e.z + (t.z / h) * d]);
+    }
+    // wooden posts under the elevated parts (not across the avenue, not on top of toys already there)
+    const floorItems = circlesOf('floor');
     let lastSup = -1;
     segs.forEach((s, i) => {
-      if (s.y < 0.03 || i - lastSup < 5) return;
+      if (s.y < 0.03 || i - lastSup < 11) return; // about every 25 cm
       if (s.x > 1.38 && s.z > HZ - 0.12 && s.z < HZ + 0.1) return;
-      if (s.x < 1.0 && s.y < 0.04) return;
+      if (floorItems.some((c) => Math.hypot(c.x - s.x, c.z - s.z) < c.r + 0.02)) return;
       lastSup = i;
-      const col = make('column', { h: s.y - 0.0105, r: 0.011, color: C.white });
+      const col = make('column', { h: s.y - 0.0125, r: 0.011, color: C.white });
       put(col, s.x, s.z, 0, i);
       commit(col, null, 0, 0, 0, 'city');
     });
-    // a little car rolling on the ramp
-    {
-      const car = make('raceCar', { color: C.red });
-      const s = segs[6], n = segs[7];
-      const yaw = Math.atan2(n.x - s.x, n.z - s.z), pitch = -Math.atan2(n.y - s.y, Math.hypot(n.x - s.x, n.z - s.z));
-      car.rotation.order = 'YXZ';
-      car.rotation.set(pitch, yaw, 0);
-      car.position.set(s.x, 0, s.z);
-      box.setFromObject(car);
-      car.position.y = s.y + 0.0045 - box.min.y;
-      commit(car, null, 0, 0, 0, 'city', true);
-    }
     // the ramp's low entrance and exit are walkable floor: keep the exact avenue/lanes free below
     // --- loose blocks & small toys filling the city (kept off the avenue and the ramp) ---
     const cityReject = (x, z, r) => {
@@ -695,5 +695,5 @@ export function scatterToys(scene, surfaces, rng) {
   stats.mergedMeshes = mergedMeshes.length;
   stats.sourceMeshes = sourceMeshes;
   stats.colliders = colliders.length;
-  return { colliders, targets, stats, placed };
+  return { colliders, targets, stats, placed, rampCurve };
 }

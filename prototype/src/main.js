@@ -45,9 +45,9 @@ const camera = new THREE.PerspectiveCamera(CAMERA.fov, innerWidth / innerHeight,
 // Target  = { name: string (Japanese label), object: Object3D }
 const room = buildRoom(scene);
 const toys = scatterToys(scene, room.surfaces, createRng(20261101));
-// marble run against the west wall, beside the foot of the bed, facing into the room
-const marbleRun = createMarbleRun(scene, createRng(7), { x: -1.82, z: 0.68, yaw: Math.PI / 2 });
-const colliders = [...room.colliders, ...toys.colliders, ...marbleRun.colliders];
+// marbles rolling down the wooden marble track
+const marbleRun = createMarbleRun(scene, createRng(7), toys.rampCurve);
+const colliders = [...room.colliders, ...toys.colliders];
 
 const ui = {
   status: document.getElementById('status'),

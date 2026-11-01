@@ -1255,28 +1255,60 @@ T.trackCurve = (rng, o = {}) => {
 };
 // Elevated wooden track following a 3D polyline (world coordinates; origin 0). userData.world = true.
 T.trackRamp = (rng, o) => {
+  // Grooved wooden marble track: one wide board with a channel down the middle,
+  // swept along a smooth curve (o.pts: groove-floor centerline, world space).
   const g = newG();
-  const wm = wd(0xd9b27c), dm = wd(0x7a4a28);
-  const curve = new THREE.CatmullRomCurve3(o.pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])), false, 'catmullrom', 0.5);
+  const curve = new THREE.CatmullRomCurve3(o.pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal');
   const len = curve.getLength();
-  const n = Math.max(4, Math.round(len / 0.022));
-  const segs = [];
-  for (let i = 0; i < n; i++) {
-    const a = curve.getPoint(i / n), b = curve.getPoint((i + 1) / n);
-    const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, hl = Math.hypot(dx, dz), L = Math.hypot(hl, dy);
-    const cx = (a.x + b.x) / 2, cyy = (a.y + b.y) / 2, cz = (a.z + b.z) / 2;
-    const yaw = Math.atan2(dx, dz), pitch = -Math.atan2(dy, hl);
-    const grp = [];
-    for (const [m, w, h, ox, oy] of [[wm, 0.046, 0.01, 0, -0.005], [dm, 0.007, 0.0025, -0.012, 0.00125], [dm, 0.007, 0.0025, 0.012, 0.00125]]) {
-      const mesh = part(g, boxG(w, h, L * 1.06), m, [cx, cyy, cz]);
-      mesh.rotation.order = 'YXZ';
-      mesh.rotation.set(pitch, yaw, 0);
-      mesh.translateX(ox); mesh.translateY(oy);
-      grp.push(mesh);
-    }
-    segs.push({ x: cx, y: cyy, z: cz });
+  const W = 0.064, T = 0.012, LIP = 0.007, LW = 0.008; // width, depth below groove, lip height, lip width
+  const prof = [[-W / 2, -T], [W / 2, -T], [W / 2, LIP], [W / 2 - LW, LIP], [W / 2 - LW, 0], [-W / 2 + LW, 0], [-W / 2 + LW, LIP], [-W / 2, LIP]];
+  const n = Math.max(8, Math.round(len / 0.01));
+  const UP = new THREE.Vector3(0, 1, 0);
+  const frames = [];
+  for (let k = 0; k <= n; k++) {
+    const u = k / n, c = curve.getPointAt(u), t = curve.getTangentAt(u);
+    const side = new THREE.Vector3().crossVectors(t, UP).normalize();
+    const up = new THREE.Vector3().crossVectors(side, t).normalize();
+    frames.push({ c, t, side, up, s: u * len });
   }
-  g.userData = { world: true, curve, segs, length: len };
+  const at = (f, p) => f.c.clone().addScaledVector(f.side, p[0]).addScaledVector(f.up, p[1]);
+  const pos = [], uv = [], idx = [];
+  // sides: separate vertices per profile edge so the corners stay crisp
+  let per = 0;
+  for (let e = 0; e < prof.length; e++) {
+    const a = prof[e], b = prof[(e + 1) % prof.length];
+    const base = pos.length / 3;
+    for (const f of frames) {
+      for (const p of [a, b]) { const v = at(f, p); pos.push(v.x, v.y, v.z); uv.push(f.s / 0.06, per + (p === b ? Math.hypot(b[0] - a[0], b[1] - a[1]) : 0) / 0.06); }
+    }
+    per += Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.06;
+    for (let k = 0; k < n; k++) {
+      const A0 = base + k * 2, B0 = A0 + 1, A1 = A0 + 2, B1 = A0 + 3;
+      idx.push(A0, B1, B0, A0, A1, B1);
+    }
+  }
+  // end caps
+  const tri = THREE.ShapeUtils.triangulateShape(prof.map((p) => new THREE.Vector2(p[0], p[1])), []);
+  for (const [f, outward] of [[frames[0], -1], [frames[n], 1]]) {
+    const base = pos.length / 3;
+    for (const p of prof) { const v = at(f, p); pos.push(v.x, v.y, v.z); uv.push(p[0] / 0.06, p[1] / 0.06); }
+    for (const [i0, i1, i2] of tri) {
+      const v0 = at(f, prof[i0]), v1 = at(f, prof[i1]), v2 = at(f, prof[i2]);
+      const nrm = new THREE.Vector3().crossVectors(v1.clone().sub(v0), v2.clone().sub(v0));
+      if (nrm.dot(f.t) * outward > 0) idx.push(base + i0, base + i1, base + i2);
+      else idx.push(base + i0, base + i2, base + i1);
+    }
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geom.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geom.setIndex(idx);
+  geom.computeVertexNormals();
+  part(g, prep(geom), wd(0xe9b23a), [0, 0, 0]);
+  const segs = [];
+  const m = Math.max(4, Math.round(len / 0.022));
+  for (let i = 0; i < m; i++) { const p = curve.getPointAt((i + 0.5) / m); segs.push({ x: p.x, y: p.y, z: p.z }); }
+  g.userData = { world: true, curve, segs, length: len, groove: { width: W - 2 * LW, depth: T } };
   return finish(g, 'trackRamp', 0.1, 0.1);
 };
 

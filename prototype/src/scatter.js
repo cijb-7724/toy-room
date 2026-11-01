@@ -18,6 +18,7 @@ export function scatterToys(scene, surfaces, rng) {
   const stats = {};
   const circles = new Map(); // surface name -> [{x, z, r, top}]
   const box = new THREE.Box3();
+  let lift = 0;
   const circlesOf = (name) => {
     if (!circles.has(name)) circles.set(name, []);
     return circles.get(name);
@@ -32,7 +33,10 @@ export function scatterToys(scene, surfaces, rng) {
     obj.rotation.set(tip ? tip.x : 0, yaw, tip ? tip.z : 0);
     obj.position.set(x, 0, z);
     box.setFromObject(obj);
-    obj.position.y = baseY - box.min.y;
+    // + up to 0.3 mm: toys resting on toys never share a face plane by chance (z-fighting)
+    // (golden-ratio sequence, not rng, so the seeded layout stays the same)
+    lift = (lift + 0.618034) % 1;
+    obj.position.y = baseY - box.min.y + 0.00005 + lift * 0.00025;
     box.setFromObject(obj);
     return box;
   }
@@ -681,6 +685,8 @@ export function scatterToys(scene, surfaces, rng) {
     mesh.name = 'toysMerged';
     mergedMeshes.push(mesh);
   }
+  // what went where, for debugging from the console (the meshes are merged away)
+  const placed = roots.map((r) => ({ type: r.userData.type, box: new THREE.Box3().setFromObject(r) }));
   for (const root of roots) scene.remove(root);
   for (const m of mergedMeshes) scene.add(m);
 
@@ -689,5 +695,5 @@ export function scatterToys(scene, surfaces, rng) {
   stats.mergedMeshes = mergedMeshes.length;
   stats.sourceMeshes = sourceMeshes;
   stats.colliders = colliders.length;
-  return { colliders, targets, stats };
+  return { colliders, targets, stats, placed };
 }

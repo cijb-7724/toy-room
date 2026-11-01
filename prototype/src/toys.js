@@ -537,7 +537,8 @@ function finish(g, type, radius, height, s = 1) {
 function wheel(g, x, y, z, r, w, hubM = CHROME) {
   const tire = latheG(`tire${f4(r)}|${f4(w)}`, [[r * 0.45, -w / 2], [r * 0.9, -w / 2], [r, -w * 0.32], [r, w * 0.32], [r * 0.9, w / 2], [r * 0.45, w / 2]], 14);
   part(g, tire, TIRE, [x, y, z], [0, 0, PI / 2]);
-  part(g, cylG(r * 0.6, r * 0.6, w * 1.04, 10), hubM, [x, y, z], [0, 0, PI / 2]);
+  // hub stands 1 mm proud of the tyre wall (0.2 mm used to z-fight with it)
+  part(g, cylG(r * 0.58, r * 0.58, w + 0.002, 10), hubM, [x, y, z], [0, 0, PI / 2]);
 }
 const PIT = (rng) => rng.pick(PRIM);
 
@@ -664,7 +665,7 @@ T.dumpTruck = (rng, o = {}) => {
   bx(g, body, 0.14, 0.055, 0.07, [0, 0.0875, 0.18], null, 0.006);
   bx(g, WINDOW, 0.12, 0.035, 0.005, [0, 0.14, 0.152]);
   for (const sx of [-1, 1]) bx(g, WINDOW, 0.004, 0.032, 0.06, [sx * 0.071, 0.14, 0.105]);
-  bx(g, pl(shade(c, 0.75)), 0.145, 0.012, 0.1, [0, 0.155, 0.105]);
+  bx(g, pl(shade(c, 0.75)), 0.145, 0.012, 0.096, [0, 0.155, 0.107]); // clear of the tipper's tailgate plane
   bx(g, CHROME, 0.14, 0.012, 0.012, [0, 0.07, 0.218]);
   for (const sx of [-1, 1]) {
     sp(g, LIGHT, 0.01, [sx * 0.05, 0.095, 0.216], [1, 1, 0.5], 8, 6);
@@ -747,7 +748,7 @@ T.schoolBus = (rng) => {
   const y = pl(0xf5b400, { r: 0.28 });
   bx(g, y, 0.07, 0.045, 0.2, [0, 0.05, 0], null, 0.004);
   bx(g, pl(0xfbd25c), 0.066, 0.004, 0.19, [0, 0.0745, 0]);
-  bx(g, BLACK, 0.071, 0.004, 0.2, [0, 0.04, 0]);
+  bx(g, BLACK, 0.074, 0.004, 0.204, [0, 0.04, 0]);
   bx(g, WINDOW, 0.06, 0.02, 0.003, [0, 0.058, 0.1]);
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 7; i++) bx(g, WINDOW, 0.002, 0.016, 0.014, [sx * 0.0355, 0.06, -0.075 + i * 0.025]);
@@ -781,7 +782,7 @@ T.trainEngine = (rng, o = {}) => {
   const g = newG();
   const c = o.color ?? rng.pick([C.blue, C.green, C.red]);
   const body = tin(c), cab = tin(shade(c, 0.75));
-  bx(g, BLACK, 0.06, 0.015, 0.14, [0, 0.0275, 0]);
+  bx(g, BLACK, 0.056, 0.015, 0.134, [0, 0.0275, 0]); // ends short of the boiler's front cap
   cy(g, body, 0.03, 0.03, 0.09, [0, 0.058, 0.025], [PI / 2, 0, 0], 16);
   bx(g, cab, 0.07, 0.07, 0.04, [0, 0.065, -0.04], null, 0.004);
   bx(g, WHITE, 0.08, 0.008, 0.05, [0, 0.103, -0.04]);
@@ -1173,7 +1174,7 @@ T.stackingRings = (rng) => {
 T.drum = (rng) => {
   const g = newG();
   const c = rng.pick([C.red, C.blue, C.green]);
-  cy(g, tin(c), 0.055, 0.055, 0.075, [0, 0.0375, 0], null, 22);
+  cy(g, tin(c), 0.055, 0.055, 0.073, [0, 0.0375, 0], null, 22);
   for (const y of [0.0045, 0.0705]) cy(g, CHROME, 0.057, 0.057, 0.009, [0, y, 0], null, 22);
   cy(g, PAGES, 0.054, 0.054, 0.003, [0, 0.0765, 0], null, 22);
   for (let i = 0; i < 8; i++) {
@@ -1296,7 +1297,7 @@ T.crayon = (rng, o = {}) => {
   const c = o.color ?? rng.pick(PAL);
   const m = cached(`cr${c}`, () => ph({ color: c, roughness: 0.8, metalness: 0 }));
   cy(g, m, 0.005, 0.005, 0.08, [0, 0.005, 0], [0, 0, PI / 2], 10);
-  cy(g, paper(0xf2ead8), 0.0053, 0.0053, 0.045, [-0.005, 0.005, 0], [0, 0, PI / 2], 10);
+  cy(g, paper(0xf2ead8), 0.0058, 0.0058, 0.045, [-0.005, 0.005, 0], [0, 0, PI / 2], 10);
   co(g, m, 0.005, 0.014, [0.047, 0.005, 0], [0, 0, -PI / 2], 10);
   return finish(g, 'crayon', 0.05, 0.01);
 };
@@ -1379,8 +1380,8 @@ T.tinCan = (rng, o = {}) => {
   const r = o.r ?? 0.04, h = o.h ?? 0.09;
   cy(g, brushed(0xc7ccd4), r, r, h, [0, h / 2, 0], null, 16);
   for (const y of [0.004, h - 0.004]) to(g, CHROME, r, 0.0035, [0, y, 0], [PI / 2, 0, 0], PI * 2, 16);
-  cy(g, paper(o.label ?? rng.pick(PRIM)), r + 0.0005, r + 0.0005, h * 0.62, [0, h * 0.5, 0], null, 16);
-  cy(g, WHITE, r + 0.0008, r + 0.0008, h * 0.14, [0, h * 0.5, 0], null, 16);
+  cy(g, paper(o.label ?? rng.pick(PRIM)), r + 0.0008, r + 0.0008, h * 0.62, [0, h * 0.5, 0], null, 16);
+  cy(g, WHITE, r + 0.0016, r + 0.0016, h * 0.14, [0, h * 0.5, 0], null, 16);
   if (o.pencils) {
     for (let i = 0; i < 6; i++) {
       const a = i * PI / 3 + 0.3, lean = 0.12 + (i % 3) * 0.08;
@@ -1442,13 +1443,13 @@ T.soldier = (rng, o = {}) => {
   const pants = pl(rng.pick([0x2a3f6a, 0xf4f1ea, 0x303030]), { r: 0.35 });
   cy(g, pl(0x3d8a45, { r: 0.5, cc: 0.3 }), 0.022, 0.024, 0.004, [0, 0.002, 0], null, 16);
   for (const sx of [-1, 1]) {
-    cy(g, pants, 0.006, 0.006, 0.03, [sx * 0.007, 0.019, 0], null, 8);
+    cy(g, pants, 0.006, 0.006, 0.026, [sx * 0.007, 0.021, 0], null, 8);
     cy(g, BLACK, 0.0075, 0.0075, 0.008, [sx * 0.007, 0.008, 0.001], null, 8);
     cp(g, coat, 0.005, 0.022, [sx * 0.018, 0.052, 0], [0, 0, -sx * 0.1]);
   }
   bx(g, coat, 0.03, 0.032, 0.016, [0, 0.05, 0], null, 0.004);
-  bx(g, WHITE, 0.003, 0.034, 0.0165, [0, 0.05, 0], [0, 0, 0.5], 0);
-  bx(g, WHITE, 0.003, 0.034, 0.0165, [0, 0.05, 0], [0, 0, -0.5], 0);
+  bx(g, WHITE, 0.003, 0.034, 0.018, [0, 0.05, 0], [0, 0, 0.5], 0);
+  bx(g, WHITE, 0.003, 0.034, 0.018, [0, 0.05, 0], [0, 0, -0.5], 0);
   cy(g, BRASS, 0.0024, 0.0024, 0.004, [0, 0.055, 0.0085], [PI / 2, 0, 0], 6);
   sp(g, FLESH, 0.0085, [0, 0.075, 0], null, 10, 8);
   cy(g, pl(0x15151a), 0.0095, 0.0105, 0.018, [0, 0.087, 0], null, 12);
@@ -1535,7 +1536,7 @@ T.barrier = (rng) => {
   const red = pl(C.red), wh = WHITE;
   for (const sx of [-1, 1]) bx(g, pl(0x303036), 0.006, 0.05, 0.03, [sx * 0.06, 0.025, 0], null, 0.001);
   for (const y of [0.032, 0.046]) {
-    for (let i = 0; i < 6; i++) bx(g, (i + (y > 0.04 ? 1 : 0)) % 2 ? red : wh, 0.02, 0.011, 0.006, [-0.05 + i * 0.02, y, 0.012], null, 0.0015);
+    for (let i = 0; i < 6; i++) bx(g, (i + (y > 0.04 ? 1 : 0)) % 2 ? red : wh, 0.02, 0.011, 0.006, [-0.05 + i * 0.02, y, 0.013], null, 0.0015);
   }
   return finish(g, 'barrier', 0.07, 0.055, rng.range(0.9, 1.1));
 };

@@ -316,7 +316,8 @@ export function buildRoom(scene) {
   lawn.rotation.x = -Math.PI / 2;
   {
     const ledgeY = wy0;
-    const lz = -HD - 0.11;
+    // entirely outside the wall (it used to poke 11 cm into the room and fight the sill)
+    const lz = -HD - 0.115;
     box(M.white, 1.3, 0.04, 0.22, win.x, ledgeY - 0.02, lz);
     const potGeo = new THREE.CylinderGeometry(0.04, 0.03, 0.07, 14);
     const potMats = [std(0xc8541f, 0.7), std(0x2a6fd8, 0.5), std(0xe9b410, 0.5), std(0xc8541f, 0.7)];
@@ -338,7 +339,7 @@ export function buildRoom(scene) {
   // sill
   const sillTop = wy0;
   const sillD = 0.18;
-  const sillW = win.w + 0.16;
+  const sillW = win.w + 0.15; // left end tucked inside the nightstand, not flush with its side
   box(M.white, sillW, 0.03, sillD, win.x, sillTop - 0.015, fz + sillD / 2);
   col(win.x - sillW / 2, sillTop - 0.03, fz, win.x + sillW / 2, sillTop, fz + sillD);
   // soft sunlight glow on the sill (sheer curtain light)
@@ -536,7 +537,7 @@ export function buildRoom(scene) {
   }
   const knobZ = dr.z + dr.w / 2 - 0.09;
   ball(M.brass, 0.028, -HW + 0.095, 1.0, knobZ);
-  const stem = add(unitRod, M.brass, -HW + 0.07, 1.0, knobZ);
+  const stem = add(unitRod, M.brass, -HW + 0.075, 1.0, knobZ);
   stem.scale.set(0.01, 0.04, 0.01);
   stem.rotation.z = Math.PI / 2;
   col(-HW, 0, dr.z - dr.w / 2 - 0.07, -HW + 0.06, dr.h + 0.07, dr.z + dr.w / 2 + 0.07);
@@ -702,7 +703,7 @@ export function buildRoom(scene) {
     const prof = [
       [0.016, 0], [0.02, 0.01], [0.019, 0.05], [0.027, 0.08], [0.02, 0.12], [0.017, 0.16],
       [0.017, 0.35], [0.024, 0.4], [0.019, 0.43], [0.024, 0.46], [0.02, 0.5], [0.028, 0.52],
-      [0.028, n.h - topT], [0.0, n.h - topT],
+      [0.028, n.h - topT - 0.001], [0.0, n.h - topT - 0.001], // 1 mm under the molding's top face
     ].map(([r, y]) => new THREE.Vector2(r, y));
     const legGeo = new THREE.LatheGeometry(prof, 14);
     for (const sx of [-1, 1]) {
@@ -808,7 +809,8 @@ export function buildRoom(scene) {
     box(M.cobalt, WT, bodyH, t.d - 2 * WT, x1 - WT / 2, BASE + bodyH / 2, t.z);
     // blue corner posts
     for (const px of [x0 + 0.026, x1 - 0.026]) {
-      for (const pz of [z0 + 0.026, z1 - 0.026]) box(M.yellow, 0.056, bodyTop, 0.056, px, bodyTop / 2, pz);
+      // 3 mm below the wall tops so the two top faces don't share a plane
+      for (const pz of [z0 + 0.026, z1 - 0.026]) box(M.yellow, 0.056, bodyTop - 0.003, 0.056, px, (bodyTop - 0.003) / 2, pz);
     }
     // blue band along the bottom of the front
     box(M.yellow, t.w - 0.1, 0.035, 0.008, t.x, 0.075, z1 + 0.004);
@@ -837,14 +839,15 @@ export function buildRoom(scene) {
 
     // lid, propped open against the wall (hinged on the back rim)
     const L = t.d + 2 * RIMO, LT = 0.03, LW = t.w + 2 * RIMO;
-    const zh = z0 - RIMO;
+    const zh = z0 - RIMO - 0.002; // hinge just behind the rim so the lid's end isn't flush with it
     let alpha = 0.45;
     for (let i = 0; i < 6; i++) alpha = Math.asin(Math.min(1, (zh - (-HD + 0.004) - LT * Math.cos(alpha)) / L));
     const lid = new THREE.Group();
     lid.position.set(t.x, t.h, zh);
     lid.rotation.x = -(Math.PI / 2 + alpha);
     root.add(lid);
-    box(M.cobalt, LW, LT, L, 0, LT / 2, L / 2, lid);
+    // panel set 2 mm inside the red frame so their outer faces never share a plane
+    box(M.cobalt, LW - 0.004, LT, L - 0.004, 0, LT / 2, L / 2, lid);
     box(M.red, LW, LT + 0.006, 0.05, 0, LT / 2, 0.025, lid);
     box(M.red, LW, LT + 0.006, 0.05, 0, LT / 2, L - 0.025, lid);
     box(M.red, 0.05, LT + 0.006, L - 0.1, -LW / 2 + 0.025, LT / 2, L / 2, lid);
@@ -928,7 +931,8 @@ export function buildRoom(scene) {
     col(x0, 0, z0, x1, s.h, z0 + ST);
     col(x0, 0, z1 - ST, x1, s.h, z1);
     // back panel
-    box(M.bookBack, BK, s.h, s.d - 2 * ST, x1 - BK / 2, s.h / 2, s.z);
+    // stops under the top board (their top faces used to coincide)
+    box(M.bookBack, BK, s.h - 0.03, s.d - 2 * ST, x1 - BK / 2, (s.h - 0.03) / 2, s.z);
     col(x1 - BK, 0, z0 + ST, x1, s.h, z1 - ST);
     // shelf boards (given y = top face)
     for (const y of s.shelves) {

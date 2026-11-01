@@ -71,6 +71,7 @@ export function createPhoto(renderer, scene, camera, colliders) {
   }
 
   return {
+    bokeh, // exposed for console debugging
     get focus() {
       return focus;
     },

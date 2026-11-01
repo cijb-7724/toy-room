@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import './antialias.js';
 import { RoomEnvironment } from 'three/addons/RoomEnvironment.js';
 import { CAMERA } from './scale.js';
 import { createRng } from './rng.js';
@@ -11,7 +10,13 @@ import { PAGES } from './pages.js';
 import { createPhoto } from './photo.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// Supersampling: draw at up to twice the screen resolution and let the browser
+// shrink it, so edges and fine texture stay smooth without blurring far detail.
+// Capped by pixel count, and lowered automatically if frames get slow.
+const MAX_PIXELS = 8.5e6;
+const qualityFor = (w, h) => Math.max(Math.min(devicePixelRatio, 2), Math.min(2, Math.sqrt(MAX_PIXELS / (w * h))));
+let quality = qualityFor(innerWidth, innerHeight);
+renderer.setPixelRatio(quality);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -82,7 +87,13 @@ for (const b of document.querySelectorAll('#bar button')) {
   b.addEventListener('mousedown', (e) => e.preventDefault());
 }
 
-addEventListener('resize', () => renderer.setSize(innerWidth, innerHeight));
+function setQuality(q) {
+  quality = q;
+  renderer.setPixelRatio(q);
+  renderer.setSize(innerWidth, innerHeight);
+  photo.setPixelRatio(q);
+}
+addEventListener('resize', () => setQuality(Math.min(quality, qualityFor(innerWidth, innerHeight))));
 
 const photo = createPhoto(renderer, scene, camera, colliders);
 
@@ -123,8 +134,18 @@ function render(dt) {
 }
 
 const clock = new THREE.Clock();
+let slowTime = 0;
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const raw = clock.getDelta();
+  const dt = Math.min(raw, 0.05);
+  // under ~25 fps for 2 s: step the supersampling down (never below the screen's own)
+  // (hitches over 0.5 s, like shader compiles or a hidden tab, are ignored)
+  if (raw < 0.5) slowTime = raw > 0.04 ? slowTime + raw : Math.max(0, slowTime - raw);
+  const floorQ = Math.min(devicePixelRatio, 2);
+  if (slowTime > 2 && quality > floorQ) {
+    setQuality(Math.max(floorQ, quality - 0.25));
+    slowTime = 0;
+  }
   controls.update(dt);
   for (const b of modeButtons) b.classList.toggle('on', b.dataset.mode === controls.mode);
   render(dt);

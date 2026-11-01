@@ -74,6 +74,9 @@ export function createPhoto(renderer, scene, camera, colliders) {
     get focus() {
       return focus;
     },
+    setPixelRatio(pr) {
+      composer.setPixelRatio(pr);
+    },
     setSize(w, h) {
       composer.setSize(w, h);
       finish.uniforms.aspect.value = w / h;

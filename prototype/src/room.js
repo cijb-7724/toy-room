@@ -96,12 +96,12 @@ export function buildRoom(scene) {
 
   const floorMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, map: floorT.map, roughnessMap: floorT.rough, roughness: 0.5, metalness: 0,
-    bumpMap: floorT.bump, bumpScale: 1.5, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 1.2,
+    bumpMap: floorT.bump, bumpScale: 1.5, clearcoat: 0.25, clearcoatRoughness: 0.55, envMapIntensity: 0.6,
   });
   const floor = add(new THREE.PlaneGeometry(ROOM.width, ROOM.depth), floorMat, 0, 0, 0, root, false, true);
   floor.rotation.x = -Math.PI / 2;
 
-  // Planar mirror over the varnished floor: streaky (vertical taps), fades with distance, darkened at plank seams.
+  // Faint, heavily blurred sheen over the satin floor (no sharp mirror images): streaky (vertical taps), fades with distance, darkened at plank seams.
   {
     const rs = Reflector.ReflectorShader;
     const shader = {
@@ -110,7 +110,7 @@ export function buildRoom(scene) {
         ...THREE.UniformsUtils.clone(rs.uniforms),
         tSeam: { value: floorT.bump },
         uvRepeat: { value: new THREE.Vector2(ROOM.width / 2.0, ROOM.depth / 1.0) },
-        strength: { value: 0.35 },
+        strength: { value: 0.06 },
       },
       vertexShader: /* glsl */`
         uniform mat4 textureMatrix;
@@ -143,7 +143,7 @@ export function buildRoom(scene) {
           float dist = distance( cameraPosition, vWPos );
           float far = smoothstep( 0.25, 3.5, dist );
           // vertical streak blur, longer with distance; slight sideways softening
-          float len = mix( 0.004, 0.03, far );
+          float len = mix( 0.03, 0.07, far );
           vec3 acc = vec3( 0.0 );
           float wsum = 0.0;
           for ( int i = -5; i <= 5; i++ ) {

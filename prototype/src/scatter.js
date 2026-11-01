@@ -40,7 +40,8 @@ export function scatterToys(scene, surfaces, rng) {
     scene.add(obj);
     if (!isTarget) roots.push(obj);
     box.setFromObject(obj);
-    if (!noCollide && box.max.y - box.min.y > 0.03) colliders.push(box.clone());
+    // even low toys collide: walking steps up onto ones under PLAYER.stepUp
+    if (!noCollide && box.max.y - box.min.y > 0.006) colliders.push(box.clone());
     if (circlesArr) {
       // things stack on the solid part of an object only (not on top of a thin pole)
       const w = Math.min(box.max.x - box.min.x, box.max.z - box.min.z);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import './antialias.js';
 import { RoomEnvironment } from 'three/addons/RoomEnvironment.js';
 import { CAMERA } from './scale.js';
 import { createRng } from './rng.js';

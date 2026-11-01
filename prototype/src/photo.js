@@ -12,7 +12,7 @@ const FinishShader = {
   uniforms: {
     tDiffuse: { value: null },
     time: { value: 0 },
-    grain: { value: 0.045 },
+    grain: { value: 0.03 },
     vignette: { value: 0.35 },
     aspect: { value: 1 },
   },
@@ -39,7 +39,11 @@ const FinishShader = {
 };
 
 export function createPhoto(renderer, scene, camera, colliders) {
-  const composer = new EffectComposer(renderer);
+  // The renderer's own antialias does not reach an EffectComposer, so its
+  // render targets get MSAA themselves (otherwise every edge crawls when moving).
+  const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+  const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
   const bokeh = new BokehPass(scene, camera, { focus: 1, aperture: 0.002, maxblur: 0.012 });
   composer.addPass(bokeh);
@@ -53,6 +57,7 @@ export function createPhoto(renderer, scene, camera, colliders) {
   const hit = new THREE.Vector3();
   const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   let focus = 1;
+  let grainClock = 0;
   function measureFocus() {
     camera.getWorldPosition(ray.origin);
     camera.getWorldDirection(ray.direction);
@@ -80,7 +85,9 @@ export function createPhoto(renderer, scene, camera, colliders) {
       // Blur grows relative to the focus distance, like a real lens: close-up
       // shots get a very shallow focus, the whole-room view stays mostly sharp.
       bokeh.uniforms.aperture.value = 0.004 / focus;
-      finish.uniforms.time.value += dt;
+      // grain changes 12 times a second like film, not every frame (reads as flicker)
+      grainClock += dt;
+      finish.uniforms.time.value = Math.floor(grainClock * 12) / 12;
       composer.render(dt);
     },
   };

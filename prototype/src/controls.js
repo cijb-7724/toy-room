@@ -6,6 +6,7 @@ const PITCH_MAX = (89 * Math.PI) / 180;
 const EPS = 1e-5;
 const WALL_MARGIN = 0.01;
 const PAGE_ANIM_TIME = 1.2;
+const FLY_R = 0.01; // fly-mode camera collision half-size (m)
 const MAX_SUBSTEP_DIST = 0.004; // metres of travel per physics substep (boards are >= 1cm)
 
 const HX = ROOM.width / 2;
@@ -343,8 +344,40 @@ export function createControls(camera, domElement, colliders, pages, ui) {
     vel.x += (tv.x - vel.x) * k;
     vel.y += (tv.y - vel.y) * k;
     vel.z += (tv.z - vel.z) * k;
-    pos.addScaledVector(vel, dt);
+    // substep per axis so the camera slides along toys instead of passing through
+    const n = Math.min(100, Math.max(1, Math.ceil((vel.length() * dt) / MAX_SUBSTEP_DIST)));
+    const h = dt / n;
+    for (let i = 0; i < n; i++) {
+      flyAxis('x', vel.x * h);
+      flyAxis('y', vel.y * h);
+      flyAxis('z', vel.z * h);
+    }
     clampFly(pos);
+  }
+
+  // Fly camera is a small cube of half-size FLY_R. A step is refused only if it
+  // enters a box it was not already inside, so a camera that starts inside can leave.
+  function insideFly(b, x, y, z) {
+    return (
+      x + FLY_R > b.min.x && x - FLY_R < b.max.x &&
+      y + FLY_R > b.min.y && y - FLY_R < b.max.y &&
+      z + FLY_R > b.min.z && z - FLY_R < b.max.z
+    );
+  }
+  function flyAxis(axis, d) {
+    if (d === 0) return;
+    const nx = pos.x + (axis === 'x' ? d : 0);
+    const ny = pos.y + (axis === 'y' ? d : 0);
+    const nz = pos.z + (axis === 'z' ? d : 0);
+    for (let i = 0; i < colliders.length; i++) {
+      const b = colliders[i];
+      if (insideFly(b, nx, ny, nz) && !insideFly(b, pos.x, pos.y, pos.z)) {
+        vel[axis] = 0;
+        return;
+      }
+    }
+    if (ny - FLY_R < 0 && d < 0) { vel.y = 0; return; } // floor
+    pos.set(nx, ny, nz);
   }
 
   function updateStatus() {

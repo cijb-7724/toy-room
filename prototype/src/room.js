@@ -946,8 +946,9 @@ export function buildRoom(scene) {
       let z = zStart, lo = zStart, hi = zStart;
       specs.forEach(([th, hh, ci]) => {
         const zc = z + dir * th / 2;
+        // a closed box: inner pages would be hidden anyway (an inset pages box shared
+        // the spine's plane and z-fought through it)
         box(std(bookCols[ci], 0.7), 0.2, hh, th, bxc, shelfY + hh / 2, zc);
-        box(M.cream, 0.19, hh - 0.01, th - 0.006, bxc - 0.005, shelfY + hh / 2, zc); // pages
         z += dir * (th + 0.002);
         lo = Math.min(lo, z); hi = Math.max(hi, z);
       });

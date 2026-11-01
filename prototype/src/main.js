@@ -8,6 +8,7 @@ import { createControls } from './controls.js';
 import { createHunt } from './hunt.js';
 import { PAGES } from './pages.js';
 import { createPhoto } from './photo.js';
+import { createMarbleRun } from './marbleRun.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
 // Supersampling: draw at up to twice the screen's own resolution (retina
@@ -44,7 +45,9 @@ const camera = new THREE.PerspectiveCamera(CAMERA.fov, innerWidth / innerHeight,
 // Target  = { name: string (Japanese label), object: Object3D }
 const room = buildRoom(scene);
 const toys = scatterToys(scene, room.surfaces, createRng(20261101));
-const colliders = [...room.colliders, ...toys.colliders];
+// marble run against the west wall, beside the foot of the bed, facing into the room
+const marbleRun = createMarbleRun(scene, createRng(7), { x: -1.82, z: 0.68, yaw: Math.PI / 2 });
+const colliders = [...room.colliders, ...toys.colliders, ...marbleRun.colliders];
 
 const ui = {
   status: document.getElementById('status'),
@@ -149,9 +152,10 @@ renderer.setAnimationLoop(() => {
     slowTime = 0;
   }
   controls.update(dt);
+  marbleRun.update(dt);
   for (const b of modeButtons) b.classList.toggle('on', b.dataset.mode === controls.mode);
   render(dt);
 });
 
 // For debugging from the browser console.
-window.__app = { scene, camera, renderer, controls, toys, hunt, photo, PAGES };
+window.__app = { scene, camera, renderer, controls, toys, hunt, photo, PAGES, marbleRun };

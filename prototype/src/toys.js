@@ -1339,11 +1339,18 @@ T.book = (rng, o = {}) => {
     if (standing) bx(g, m, dt, dh, dw, [ct - Tt / 2, ch, W / 2 - cw], null, rad);
     else bx(g, m, dw, dt, dh, [cw - W / 2, ct, ch - H / 2], null, rad);
   };
-  B(0, Tt, 0, W, 0, H, cover);
-  B(0.0015, Tt - 0.0015, 0.004, W + 0.0015, 0.002, H - 0.002, PAGES, 0);
-  B(Tt, Tt + 0.0008, W * 0.2, W * 0.8, H * 0.55, H * 0.8, paper(0xf2ead8), 0);
-  B(Tt, Tt + 0.0008, W * 0.2, W * 0.8, H * 0.2, H * 0.28, pl(rng.pick(PAL), { r: 0.6, cc: 0.1 }), 0);
-  B(0, Tt, 0, 0.004, 0, H, cover, 0);
+  // Built like a real hardback: spine + two boards + a page block that shows
+  // between the boards. Parts only touch back-to-back (both faces hidden), so no
+  // two visible faces share a plane and nothing z-fights.
+  const bd = Math.min(0.0018, Tt * 0.15); // board thickness
+  const sp = 0.003; // spine thickness (along w)
+  B(0, Tt, 0, sp, 0, H, cover, 0); // spine
+  B(0, bd, sp, W, 0, H, cover, 0); // back board
+  B(Tt - bd, Tt, sp, W, 0, H, cover, 0); // front board
+  B(bd, Tt - bd, sp, W - 0.002, 0.002, H - 0.002, PAGES, 0); // page block, set in from the board edges
+  // labels sit proud of the front board by 0.6 mm
+  B(Tt, Tt + 0.0006, W * 0.2, W * 0.8, H * 0.55, H * 0.8, paper(0xf2ead8), 0);
+  B(Tt, Tt + 0.0006, W * 0.2, W * 0.8, H * 0.2, H * 0.28, pl(rng.pick(PAL), { r: 0.6, cc: 0.1 }), 0);
   if (standing) return finish(g, 'book', Math.hypot(Tt, W) / 2, H);
   return finish(g, 'book', Math.hypot(W, H) / 2, Tt + 0.001);
 };
